@@ -15,11 +15,17 @@ Tecnologias Utilizadas
 | Containers     | Docker + Docker Compose       |
 
 --------------
+
 portfolio-raynara/
-├── backend/         # Código da API em .NET
-├── frontend/        # Código do frontend em React
+
+├── backend/         #API em .NET
+
+├── frontend/        #frontend em React
+
 ├── database/        # Script init.sql com estrutura do banco
+
 ├── docker-compose.yml
+
 └── README.md
 
 --------------
