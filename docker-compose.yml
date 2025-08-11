@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   db:
     image: postgres:16
@@ -13,16 +11,22 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raynara -d portfoliodb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   api:
     build: ./backend
     ports:
-      - "5000:80"
+      - "5000:8080"   
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=portfoliodb;Username=raynara;Password=secret123
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=portfoliodb;Username=raynara;Password=secret123
 
   frontend:
     build: ./frontend
@@ -30,6 +34,7 @@ services:
       - "3000:3000"
     depends_on:
       - api
+    profiles: ["frontend"]
 
 volumes:
   pgdata:

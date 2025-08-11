@@ -1,35 +1,36 @@
-# ---- .NET / ASP.NET Core ----
+# Arquivos de ambiente reais
+.env
+
+# Configurações sensíveis do .NET
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.json
+
+# Build .NET
 bin/
 obj/
-**/*.user
-**/*.suo
-*.vspscc
-.vs/
 
-# ---- Node / Frontend ----
-node_modules/
-dist/
-build/
-npm-debug.log
-yarn-error.log
-
-# ---- Docker ----
-**/.docker/
-**/Dockerfile.*
-!backend/Dockerfile
-!frontend/Dockerfile
-
-# ---- Banco de dados ----
-pgdata/
-*.db
-
-# ---- IDEs e configs locais ----
-.idea/
+# Configuração do usuário
+*.user
+*.suo
 .vscode/
-*.env
-*.local
-*.log
+*.swp
 
-# ---- Sistema Operacional ----
-Thumbs.db
+# Logs
+*.log
+logs/
+
+# Docker volumes e cache
+**/pgdata/
+**/data/
+**/tmp/
+**/node_modules/
+
+# Frontend build (React/Vue/etc)
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+
+# Arquivos do sistema
 .DS_Store
+Thumbs.db
