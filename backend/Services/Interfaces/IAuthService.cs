@@ -1,3 +1,4 @@
+// backend/Services/Interfaces/IAuthService.cs
 using PortfolioApi.Models;
 
 namespace PortfolioApi.Services.Interfaces;

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Security.Claims; // <- ADICIONE ISSO
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -11,13 +12,20 @@ using PortfolioApi.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// DB por ambiente
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDbContext<AppDbContext>(opt =>
+        opt.UseInMemoryDatabase("tests-db"));
+}
+else
+{
+    var cs = builder.Configuration.GetConnectionString("DefaultConnection")
+             ?? builder.Configuration["ConnectionStrings:DefaultConnection"];
+    builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(cs));
+}
 
-var cs = builder.Configuration.GetConnectionString("DefaultConnection")
-         ?? builder.Configuration["ConnectionStrings:DefaultConnection"];
-
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(cs));
-
-
+// CORS
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("frontend", p =>
@@ -26,13 +34,12 @@ builder.Services.AddCors(opt =>
          .WithOrigins("http://localhost:3000"));
 });
 
-
-var jwtSection = builder.Configuration.GetSection("Jwt");
-var issuer = jwtSection["Issuer"] ?? "PortfolioApi";
-var audience = jwtSection["Audience"] ?? "PortfolioFrontend";
-var secret = jwtSection["Secret"] ?? "CHANGE_ME_SUPER_SECRET_KEY_123";
-var keyBytes = Encoding.UTF8.GetBytes(secret);
-var signingKey = new SymmetricSecurityKey(keyBytes);
+// JWT (≥ 32 chars)
+var issuer   = builder.Configuration["Jwt:Issuer"]   ?? "PortfolioApi";
+var audience = builder.Configuration["Jwt:Audience"] ?? "PortfolioFrontend";
+var secret   = builder.Configuration["Jwt:Secret"]   ?? "default-test-secret-32-chars-minimum-__";
+if (secret.Length < 32) secret = secret.PadRight(32, '_');
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -47,25 +54,25 @@ builder.Services
             ValidIssuer = issuer,
             ValidAudience = audience,
             IssuerSigningKey = signingKey,
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Zero,
+            NameClaimType = ClaimTypes.Name
         };
     });
 
 builder.Services.AddAuthorization();
 
-
+// DI
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICertificateRepository, CertificateRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-
+// Controllers + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "PortfolioApi", Version = "v1" });
-
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.Http,
@@ -73,7 +80,6 @@ builder.Services.AddSwaggerGen(c =>
         BearerFormat = "JWT",
         Description = "Cole apenas o token JWT (sem a palavra 'Bearer')."
     });
-
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -87,7 +93,6 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -98,3 +103,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// para WebApplicationFactory nos testes
+public partial class Program { }

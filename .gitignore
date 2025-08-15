@@ -4,7 +4,6 @@
 # Configurações sensíveis do .NET
 appsettings.Development.json
 appsettings.Production.json
-appsettings.*.json
 
 # Build .NET
 bin/
