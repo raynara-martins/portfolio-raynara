@@ -180,3 +180,137 @@ dotnet add PortfolioApi.
 - Tests package FluentAssertions
 - Tests package System.Net.Http.Json
 - Tests package BCrypt.Net-Next
+- new tool-manifest
+- tool install dotnet-reportgenerator-globaltool
+- dotnet add PortfolioApi.Tests package coverlet.collector
+
+---
+# Plano de Cobertura de Testes — PortfolioApi
+
+**Meta:** subir de **78% (line)** / **44% (branch)** para **≥ 85% / ≥ 70%**.
+
+> **Padrão de nomes**
+> - Unit: `Classe_Metodo_Cenario_Resultado()`
+> - Integração: `Rota_Cenario_Status_Efeito()`
+
+---
+
+## 1) AuthService (Unit)
+
+**Arquivo:** `backend/Services/AuthService.cs`  
+**Branches:** usuário não encontrado; senha em texto vs hash; geração de JWT.
+
+- [ ] `AuthService_LoginAsync_UserNotFound_ReturnsFalseNull()`
+- [ ] `AuthService_LoginAsync_PlainPassword_Match_ReturnsTokenAndUser()`
+- [ ] `AuthService_LoginAsync_PlainPassword_Wrong_ReturnsFalseNull()`
+- [ ] `AuthService_LoginAsync_HashedPassword_Match_ReturnsTokenAndUser()`  *(seed com BCrypt)*
+- [ ] `AuthService_LoginAsync_HashedPassword_Wrong_ReturnsFalseNull()`
+- [ ] `AuthService_GenerateJwt_IncludesNameAndEmailClaims()`  *(Name/sub/email)*
+- [ ] `AuthService_LoginAsync_TokenHasIssuerAudienceFromConfig()`
+
+> **Ganho de branch:** cobre ambos caminhos de verificação de senha e retornos de erro.
+
+---
+
+## 2) UsersService / UserRepository (Unit)
+
+**Objetivo:** retorno **nulo** e **com dados**.
+
+- [ ] `UserService_GetByEmailAsync_NotFound_ReturnsNull()`
+- [ ] `UserService_GetByEmailAsync_Found_ReturnsUser()`
+
+---
+
+## 3) CertificatesController / CertificateRepository
+
+### Unit (mock de repo)
+- [ ] `CertificatesController_GetMine_UserHasNone_ReturnsEmptyList()`
+- [ ] `CertificatesController_GetMine_UserHasMany_ReturnsList()`
+
+### Integração (pipeline real)
+- [ ] `GET_/certificates/mine_Unauthorized_401()`
+- [ ] `GET_/certificates/mine_Authorized_NoData_200EmptyArray()`
+- [ ] `GET_/certificates/mine_Authorized_WithData_200AndItems()`
+
+> **Ganho de branch:** cobre `if` interno para 0 itens vs N itens.
+
+---
+
+## 4) AuthController (Integração)
+
+- [x] `POST_/auth/login_ValidCredentials_200_ReturnsTokenAndUser()` **(já coberto)**
+- [x] `POST_/auth/login_InvalidPassword_401()`
+- [x] `POST_/auth/login_UnknownEmail_401()`
+- [ ] `POST_/auth/login_MissingFields_400_FromValidator()` *(email/senha vazios)*
+
+---
+
+## 5) /me (UsersController — Integração)
+
+- [ ] `GET_/me_NoToken_401()`
+- [ ] `GET_/me_InvalidToken_401()`
+- [x] `GET_/me_ValidToken_200_ReturnsUser()` **(já coberto)**  
+- [ ] `GET_/me_ValidToken_ButUserNotFound_404()` *(token com email inexistente)*
+
+> **Ganho de branch:** cobre `if`s de `Name` vazio e `user == null`.
+
+---
+
+## 6) Validators (Unit)
+
+**LoginRequestValidator**
+- [ ] `LoginRequestValidator_EmailEmpty_Invalid()`
+- [ ] `LoginRequestValidator_PasswordEmpty_Invalid()`
+- [ ] `LoginRequestValidator_EmailMalformed_Invalid()`
+- [ ] `LoginRequestValidator_Valid_OK()`
+
+---
+
+## 7) Program/Auth Config (Integração negativa)
+
+**Cenários de bearer/token malformado**
+- [ ] `Any_Endpoint_BearerMissingScheme_401()` *(ex.: `Authorization: Token x`)*
+- [ ] `Any_Endpoint_BearerButEmptyToken_401()`
+- [ ] `Any_Endpoint_TokenWithWrongAudience_401()` *(aud/iss/secret divergentes)*
+
+> **Dica:** gere token inválido com secret diferente ou `aud` errado via helper no teste.
+
+---
+
+## 8) Repositórios (Unit — opcional)
+
+- [ ] `CertificateRepository_GetByUserEmail_NoData_ReturnsEmpty()`
+- [ ] `CertificateRepository_GetByUserEmail_WithData_ReturnsList()`
+
+*(A camada já é exercitada nos testes de integração com EF InMemory; unit aqui é bônus.)*
+
+---
+
+## 9) Gaps apontados pelo Report
+
+Focar nos pontos com **maior Crap Score** / **baixa branch**:
+- [ ] `CertificatesController.GetMine()` — adicionar cenários vazio/erro.
+- [ ] Classes com **Line < 90%** e **Branch < 70%** no relatório.
+
+---
+
+## 10) Metas & Acompanhamento
+
+- [ ] **Meta 1:** Branch ≥ **55%**
+- [ ] **Meta 2:** Branch ≥ **65%**
+- [ ] **Meta final:** Branch ≥ **70%** e Line ≥ **85%**
+
+**Como medir:**
+```bash
+# Coletar cobertura (Coverlet collector)
+dotnet test PortfolioApi.Tests `
+  --collect:"XPlat Code Coverage" `
+  --results-directory "PortfolioApi.Tests/TestResults/coverage"
+
+# Gerar relatório HTML
+dotnet tool run reportgenerator `
+  -reports:"PortfolioApi.Tests/TestResults/coverage/**/coverage.cobertura.xml" `
+  -targetdir:"PortfolioApi.Tests/TestResults/coverage-report"
+
+# Abrir
+start PortfolioApi.Tests/TestResults/coverage-report/index.html
